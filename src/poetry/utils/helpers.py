@@ -73,9 +73,8 @@ def directory(path: Path) -> Iterator[Path]:
 
 # Correct type signature when used as `shutil.rmtree(..., onexc=_on_rm_error)`.
 @overload
-def _on_rm_error(
-    func: Callable[[str], None], path: str, exc_info: Exception
-) -> None: ...
+def _on_rm_error(func: Callable[[str], None], path: str, exc_info: Exception) -> None:
+    ...
 
 
 # Correct type signature when used as `shutil.rmtree(..., onerror=_on_rm_error)`.
@@ -84,7 +83,8 @@ def _on_rm_error(
     func: Callable[[str], None],
     path: str,
     exc_info: tuple[type[BaseException], BaseException, TracebackType],
-) -> None: ...
+) -> None:
+    ...
 
 
 def _on_rm_error(func: Callable[[str], None], path: str, exc_info: Any) -> None:
@@ -214,7 +214,7 @@ def get_package_version_display_string(
 
 
 def paths_csv(paths: list[Path]) -> str:
-    return ", ".join(f'"{c!s}"' for c in paths)
+    return ", ".join([f'"{str(c)}"' for c in paths])
 
 
 def is_dir_writable(path: Path, create: bool = False) -> bool:
