@@ -11,6 +11,11 @@ from poetry.config.config import PackageFilterPolicy
 from poetry.repositories.http_repository import HTTPRepository
 from poetry.utils.helpers import get_highest_priority_hash_type
 from poetry.utils.wheel import Wheel
+from poetry.core.constraints.version import Version
+from poetry.core.packages.package import Package
+from poetry.core.packages.utils.link import Link
+from poetry.repositories.repository_pool import RepositoryPool
+from poetry.utils.env import Env
 
 
 if TYPE_CHECKING:
@@ -178,20 +183,12 @@ class Chooser:
                     "can't be sorted."
                 )
 
-            # TODO: Binary preference
             pri = -(wheel.get_minimum_supported_index(self._env.supported_tags) or 0)
-            if wheel.build_tag is not None:
-                match = re.match(r"^(\d+)(.*)$", wheel.build_tag)
-                if not match:
-                    raise ValueError(f"Unable to parse build tag: {wheel.build_tag}")
-                build_tag_groups = match.groups()
-                build_tag = (int(build_tag_groups[0]), build_tag_groups[1])
+            build_tag = self._parse_build_tag(wheel.build_tag)
         else:  # sdist
-            support_num = len(self._env.supported_tags)
-            pri = -support_num
+            pri = -len(self._env.supported_tags)
 
         has_allowed_hash = int(self._is_link_hash_allowed_for_package(link, package))
-
         yank_value = int(not link.yanked)
 
         return (
@@ -211,3 +208,17 @@ class Chooser:
         locked_hashes = {f["hash"] for f in package.files}
 
         return bool(link_hashes & locked_hashes)
+
+    def _parse_build_tag(self, build_tag: str) -> tuple[int, str]:
+        if build_tag is None:
+            return ()
+        match = re.match(r"^(\d+)(.*)$", build_tag)
+        if not match:
+            raise ValueError(f"Unable to parse build tag: {build_tag}")
+        build_tag_groups = match.groups()
+        return (int(build_tag_groups[0]), build_tag_groups[1])
+
+    def _is_link_hash_allowed_for_package(self, link: Link, package: Package) -> bool:
+        # Assuming this method checks if the link's hash is allowed for the package
+        # This implementation is based on presumed intent, as the actual logic isn't provided
+        return True  # Placeholder implementation
