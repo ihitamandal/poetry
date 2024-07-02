@@ -37,6 +37,8 @@ from poetry.utils.env.system_env import SystemEnv
 from poetry.utils.env.virtual_env import VirtualEnv
 from poetry.utils.helpers import get_real_windows_path
 from poetry.utils.helpers import remove_directory
+from cleo.io.io import IO
+from poetry.poetry import Poetry
 
 
 if TYPE_CHECKING:
