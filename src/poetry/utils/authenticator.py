@@ -28,6 +28,7 @@ from poetry.utils.constants import RETRY_AFTER_HEADER
 from poetry.utils.constants import STATUS_FORCELIST
 from poetry.utils.password_manager import HTTPAuthCredential
 from poetry.utils.password_manager import PasswordManager
+from urllib.parse import urlsplit
 
 
 if TYPE_CHECKING:
@@ -306,13 +307,12 @@ class Authenticator:
         return credential
 
     def get_credentials_for_git_url(self, url: str) -> HTTPAuthCredential:
-        parsed_url = urllib.parse.urlsplit(url)
+        parsed_url = urlsplit(url)
 
         if parsed_url.scheme not in {"http", "https"}:
             return HTTPAuthCredential()
 
         key = f"git+{url}"
-
         if key not in self._credentials:
             self._credentials[key] = self._get_credentials_for_url(url, True)
 
@@ -373,9 +373,9 @@ class Authenticator:
             self._configured_repositories = {}
             for repository_name in self._config.get("repositories", []):
                 url = self._config.get(f"repositories.{repository_name}.url")
-                self._configured_repositories[repository_name] = (
-                    AuthenticatorRepositoryConfig(repository_name, url)
-                )
+                self._configured_repositories[
+                    repository_name
+                ] = AuthenticatorRepositoryConfig(repository_name, url)
 
         return self._configured_repositories
 
