@@ -588,10 +588,14 @@ class LazyWheelOverHTTP(LazyFileOverHTTP):
         This supports both * and numeric ranges, from success or error responses:
         https://www.rfc-editor.org/rfc/rfc9110#field.content-range.
         """
-        m = re.match(r"bytes [^/]+/([0-9]+)", arg)
-        if m is None:
-            raise HTTPRangeRequestUnsupported(f"could not parse Content-Range: '{arg}'")
-        return int(m.group(1))
+        try:
+            start = arg.rfind("/") + 1
+            full_length = int(arg[start:])
+        except (ValueError, IndexError) as e:
+            raise HTTPRangeRequestUnsupported(
+                f"could not parse Content-Range: '{arg}'"
+            ) from e
+        return full_length
 
     def _try_initial_chunk_request(
         self, initial_chunk_size: int
