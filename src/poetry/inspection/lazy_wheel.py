@@ -25,6 +25,7 @@ from requests.models import CONTENT_CHUNK_SIZE
 from requests.models import HTTPError
 from requests.models import Response
 from requests.status_codes import codes
+from requests import Session
 
 
 if TYPE_CHECKING:
@@ -414,12 +415,16 @@ class LazyFileOverHTTP(ReadOnlyIOWrapper):
             self._url, headers=self._uncached_headers(), allow_redirects=True
         )
         head.raise_for_status()
-        assert head.status_code == codes.ok
-        accepted_range = head.headers.get("Accept-Ranges", None)
+
+        if head.status_code != codes.ok:
+            raise HTTPRangeRequestUnsupported("Unexpected status code")
+
+        accepted_range = head.headers.get("Accept-Ranges")
         if accepted_range != "bytes":
             raise HTTPRangeRequestUnsupported(
-                f"server does not support byte ranges: header was '{accepted_range}'"
+                f"Server does not support byte ranges: '{accepted_range}'"
             )
+
         return int(head.headers["Content-Length"])
 
     def _fetch_content_length(self) -> int:
@@ -483,6 +488,16 @@ class LazyFileOverHTTP(ReadOnlyIOWrapper):
                 self.seek(start)
                 for chunk in self._fetch_content_range(range_start, range_end):
                     self._file.write(chunk)
+
+    def _uncached_headers(self):
+        return {"Cache-Control": "no-cache"}
+
+    def _setup_content(self):
+        if self._length is None:
+            self._length = self._content_length_from_head()
+
+    def _reset_content(self):
+        self._length = None
 
 
 class LazyWheelOverHTTP(LazyFileOverHTTP):
