@@ -28,6 +28,8 @@ from poetry.utils.constants import RETRY_AFTER_HEADER
 from poetry.utils.constants import STATUS_FORCELIST
 from poetry.utils.password_manager import HTTPAuthCredential
 from poetry.utils.password_manager import PasswordManager
+from cleo.io.io import IO
+from urllib.parse import urlsplit
 
 
 if TYPE_CHECKING:
@@ -354,9 +356,10 @@ class Authenticator:
                 name, "https://upload.pypi.org/legacy/"
             )
         else:
-            if name not in self.configured_repositories:
+            repos = self.configured_repositories
+            if name not in repos:
                 return None
-            repository = self.configured_repositories[name]
+            repository = repos[name]
 
         return self._get_credentials_for_repository(
             repository=repository, username=username
@@ -373,9 +376,9 @@ class Authenticator:
             self._configured_repositories = {}
             for repository_name in self._config.get("repositories", []):
                 url = self._config.get(f"repositories.{repository_name}.url")
-                self._configured_repositories[repository_name] = (
-                    AuthenticatorRepositoryConfig(repository_name, url)
-                )
+                self._configured_repositories[
+                    repository_name
+                ] = AuthenticatorRepositoryConfig(repository_name, url)
 
         return self._configured_repositories
 
@@ -438,6 +441,47 @@ class Authenticator:
         if selected:
             return selected.certs(config=self._config)
         return RepositoryCertificateConfig()
+
+    def __post_init__(self) -> None:
+        parsed_url = urlsplit(self.url)
+        self.netloc = parsed_url.netloc
+        self.path = parsed_url.path
+
+    def certs(self, config: Config) -> RepositoryCertificateConfig:
+        return RepositoryCertificateConfig.create(self.name, config)
+
+    def get_http_credentials(
+        self, password_manager: PasswordManager, username: str | None = None
+    ) -> HTTPAuthCredential:
+        # Try with the repository name via the password manager
+        cred_dict = password_manager.get_http_auth(self.name) or {}
+        if "password" in cred_dict:
+            return HTTPAuthCredential(**cred_dict)
+
+        if password_manager.use_keyring:
+            # Fallback to URL and netloc based keyring entries
+            return password_manager.get_credential(
+                self.url, self.netloc, username=cred_dict.get("username", None)
+            )
+
+        return HTTPAuthCredential(**cred_dict)  # Empty if no credentials found
+
+    @property
+    def configured_repositories(self) -> dict[str, AuthenticatorRepositoryConfig]:
+        if self._configured_repositories is None:
+            self._configured_repositories = (
+                {}
+            )  # Load your repositories configuration here
+        return self._configured_repositories
+
+    def _get_credentials_for_repository(
+        self, repository: AuthenticatorRepositoryConfig, username: str | None = None
+    ) -> HTTPAuthCredential:
+        if repository.name not in self._credentials:
+            self._credentials[repository.name] = repository.get_http_credentials(
+                self._password_manager, username
+            )
+        return self._credentials[repository.name]
 
 
 _authenticator: Authenticator | None = None
