@@ -4,6 +4,7 @@ import sys
 
 from contextlib import suppress
 from typing import TYPE_CHECKING
+from pathlib import Path
 
 
 if TYPE_CHECKING:
@@ -60,10 +61,8 @@ def is_relative_to(this: Path, other: Path) -> bool:
     See: https://docs.python.org/3/library/pathlib.html#pathlib.PurePath.is_relative_to
     """
     if sys.version_info < (3, 9):
-        with suppress(ValueError):
-            this.relative_to(other)
-            return True
-        return False
+        # Using parts instead of relative_to for determining the relative path relationship
+        return this.parts[: len(other.parts)] == other.parts
 
     return this.is_relative_to(other)
 
