@@ -29,6 +29,14 @@ from poetry.packages.package_collection import PackageCollection
 from poetry.puzzle.exceptions import OverrideNeeded
 from poetry.repositories.exceptions import PackageNotFound
 from poetry.utils.helpers import get_file_hash
+from cleo.io.io import IO
+from collections.abc import Collection
+from packaging.utils import NormalizedName
+from pathlib import Path
+from poetry.core.packages.dependency import Dependency
+from poetry.core.packages.package import Package
+from poetry.repositories import RepositoryPool
+from poetry.utils.env import Env
 
 
 if TYPE_CHECKING:
@@ -711,18 +719,19 @@ class Provider:
         return None
 
     def debug(self, message: str, depth: int = 0) -> None:
-        if not (self._io.is_very_verbose() or self._io.is_debug()):
+        if not self._is_debugging:
             return
 
+        original_message = message
         if message.startswith("fact:"):
             if "depends on" in message:
                 m = re.match(r"fact: (.+?) depends on (.+?) \((.+?)\)", message)
-                if m is None:
+                if not m:
                     raise ValueError(f"Unable to parse fact: {message}")
-                m2 = re.match(r"(.+?) \((.+?)\)", m.group(1))
-                if m2:
-                    name = m2.group(1)
-                    version = f" (<c2>{m2.group(2)}</c2>)"
+                package_info = re.match(r"(.+?) \((.+?)\)", m.group(1))
+                if package_info:
+                    name = package_info.group(1)
+                    version = f" (<c2>{package_info.group(2)}</c2>)"
                 else:
                     name = m.group(1)
                     version = ""
@@ -756,16 +765,14 @@ class Provider:
                     f" (<c2>{m.group(2)}</c2>)"
                 )
             else:
-                message = (
-                    f"<fg=blue>derived</>: <c1>{message.split('derived: ')[1]}</c1>"
-                )
+                message = f"<fg=blue>derived</>: <c1>{original_message.split('derived: ')[1]}</c1>"
         elif message.startswith("conflict:"):
             m = re.match(r"conflict: (.+?) depends on (.+?) \((.+?)\)", message)
             if m:
-                m2 = re.match(r"(.+?) \((.+?)\)", m.group(1))
-                if m2:
-                    name = m2.group(1)
-                    version = f" (<c2>{m2.group(2)}</c2>)"
+                package_info = re.match(r"(.+?) \((.+?)\)", m.group(1))
+                if package_info:
+                    name = package_info.group(1)
+                    version = f" (<c2>{package_info.group(2)}</c2>)"
                 else:
                     name = m.group(1)
                     version = ""
@@ -775,26 +782,21 @@ class Provider:
                     f"depends on <c1>{m.group(2)}</c1> (<c2>{m.group(3)}</c2>)"
                 )
             else:
-                message = (
-                    "<fg=red;options=bold>conflict</>:"
-                    f" {message.split('conflict: ')[1]}"
-                )
+                message = f"<fg=red;options=bold>conflict</>: {original_message.split('conflict: ')[1]}"
 
         message = message.replace("! ", "<error>!</error> ")
 
-        if self.is_debugging():
-            debug_info = str(message)
-            debug_info = (
-                "\n".join(
-                    [
-                        f"<debug>{str(depth).rjust(4)}:</debug> {s}"
-                        for s in debug_info.split("\n")
-                    ]
-                )
-                + "\n"
+        debug_info = (
+            "\n".join(
+                [
+                    f"<debug>{str(depth).rjust(4)}:</debug> {s}"
+                    for s in message.split("\n")
+                ]
             )
+            + "\n"
+        )
 
-            self._io.write(debug_info)
+        self._io.write(debug_info)
 
     def _group_by_source(
         self, dependencies: Iterable[Dependency]
