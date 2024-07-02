@@ -10,6 +10,7 @@ from poetry.core.version.exceptions import InvalidVersion
 from tomlkit.toml_document import TOMLDocument
 
 from poetry.console.commands.command import Command
+from poetry.core.constraints.version import Version
 
 
 if TYPE_CHECKING:
@@ -88,25 +89,23 @@ patch, minor, major, prepatch, preminor, premajor, prerelease.
     def increment_version(
         self, version: str, rule: str, next_phase: bool = False
     ) -> Version:
-        from poetry.core.constraints.version import Version
-
         try:
             parsed = Version.parse(version)
         except InvalidVersion:
             raise ValueError("The project's version doesn't seem to follow semver")
 
-        if rule in {"major", "premajor"}:
+        if rule == "major":
             new = parsed.next_major()
-            if rule == "premajor":
-                new = new.first_prerelease()
-        elif rule in {"minor", "preminor"}:
+        elif rule == "premajor":
+            new = parsed.next_major().first_prerelease()
+        elif rule == "minor":
             new = parsed.next_minor()
-            if rule == "preminor":
-                new = new.first_prerelease()
-        elif rule in {"patch", "prepatch"}:
+        elif rule == "preminor":
+            new = parsed.next_minor().first_prerelease()
+        elif rule == "patch":
             new = parsed.next_patch()
-            if rule == "prepatch":
-                new = new.first_prerelease()
+        elif rule == "prepatch":
+            new = parsed.next_patch().first_prerelease()
         elif rule == "prerelease":
             if parsed.is_unstable():
                 pre = parsed.pre
