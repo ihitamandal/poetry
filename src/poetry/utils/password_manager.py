@@ -6,6 +6,8 @@ import logging
 
 from contextlib import suppress
 from typing import TYPE_CHECKING
+import keyring
+import keyring.errors
 
 
 if TYPE_CHECKING:
@@ -55,9 +57,6 @@ class PoetryKeyring:
         return HTTPAuthCredential(username=username, password=None)
 
     def get_password(self, name: str, username: str) -> str | None:
-        import keyring
-        import keyring.errors
-
         name = self.get_entry_name(name)
 
         try:
