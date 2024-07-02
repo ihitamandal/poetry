@@ -16,6 +16,9 @@ from tomlkit import inline_table
 from poetry.console.commands.command import Command
 from poetry.console.commands.env_command import EnvCommand
 from poetry.utils.dependency_specification import RequirementsParser
+from poetry.core.packages.package import AUTHOR_REGEX
+from poetry.core.utils.helpers import combine_unicode
+from poetry.repositories import RepositoryPool
 
 
 if TYPE_CHECKING:
@@ -496,9 +499,6 @@ The <c1>init</c1> command creates a basic <comment>pyproject.toml</> file in the
 
     @staticmethod
     def _validate_author(author: str, default: str) -> str | None:
-        from poetry.core.packages.package import AUTHOR_REGEX
-        from poetry.core.utils.helpers import combine_unicode
-
         author = combine_unicode(author or default)
 
         if author in ["n", "no"]:
