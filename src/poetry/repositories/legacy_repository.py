@@ -14,6 +14,9 @@ from poetry.repositories.exceptions import PackageNotFound
 from poetry.repositories.http_repository import HTTPRepository
 from poetry.repositories.link_sources.html import SimpleRepositoryPage
 from poetry.repositories.link_sources.html import SimpleRepositoryRootPage
+from packaging.utils import NormalizedName
+from poetry.config.config import Config
+from poetry.core.constraints.version import Version
 
 
 if TYPE_CHECKING:
@@ -108,8 +111,13 @@ class LegacyRepository(HTTPRepository):
     ) -> dict[str, Any]:
         page = self.get_page(name)
 
-        links = list(page.links_for_version(name, version))
-        yanked = page.yanked(name, version)
+        # Collect links and yanked status in a single pass
+        links = []
+        yanked = False
+        for link in page.links_for_version(name, version):
+            links.append(link)
+            if not yanked:
+                yanked = page.yanked(name, version)
 
         return self._links_to_data(
             links,
