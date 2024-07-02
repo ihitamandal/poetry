@@ -27,6 +27,7 @@ from poetry.core.version.requirements import InvalidRequirement
 
 from poetry.utils.helpers import extractall
 from poetry.utils.isolated_build import isolated_builder
+from packaging.utils import NormalizedName
 
 
 if TYPE_CHECKING:
@@ -130,13 +131,10 @@ class PackageInfo:
             dependency strings will be parsed relative to this directory.
         """
         name = name or self.name
-
         if not name:
             raise RuntimeError("Unable to create package with no name")
 
         if not self.version:
-            # The version could not be determined, so we raise an error since it is
-            # mandatory.
             raise RuntimeError(f"Unable to retrieve the package version for {name}")
 
         package = Package(
@@ -147,75 +145,25 @@ class PackageInfo:
             source_reference=self._source_reference,
             yanked=self.yanked,
         )
+
         if self.summary is not None:
             package.description = self.summary
+
         package.root_dir = root_dir
         package.python_versions = self.requires_python or "*"
         package.files = self.files
 
-        # If this is a local poetry project, we can extract "richer" requirement
-        # information, eg: development requirements etc.
-        if root_dir is not None:
-            path = root_dir
-        elif self._source_type == "directory" and self._source_url is not None:
-            path = Path(self._source_url)
-        else:
-            path = None
+        path = self._get_package_path(root_dir)
 
-        if path is not None:
+        if path:
             poetry_package = self._get_poetry_package(path=path)
             if poetry_package:
                 package.extras = poetry_package.extras
                 for dependency in poetry_package.requires:
                     package.add_dependency(dependency)
-
                 return package
 
-        seen_requirements = set()
-
-        package_extras: dict[NormalizedName, list[Dependency]] = {}
-        for req in self.requires_dist or []:
-            try:
-                # Attempt to parse the PEP-508 requirement string
-                dependency = Dependency.create_from_pep_508(req, relative_to=root_dir)
-            except InvalidMarker:
-                # Invalid marker, We strip the markers hoping for the best
-                logger.warning(
-                    "Stripping invalid marker (%s) found in %s-%s dependencies",
-                    req,
-                    package.name,
-                    package.version,
-                )
-                req = req.split(";")[0]
-                dependency = Dependency.create_from_pep_508(req, relative_to=root_dir)
-            except InvalidRequirement:
-                # Unable to parse requirement so we skip it
-                logger.warning(
-                    "Invalid requirement (%s) found in %s-%s dependencies, skipping",
-                    req,
-                    package.name,
-                    package.version,
-                )
-                continue
-
-            if dependency.in_extras:
-                # this dependency is required by an extra package
-                for extra in dependency.in_extras:
-                    if extra not in package_extras:
-                        # this is the first time we encounter this extra for this
-                        # package
-                        package_extras[extra] = []
-
-                    package_extras[extra].append(dependency)
-
-            req = dependency.to_pep_508(with_extras=True)
-
-            if req not in seen_requirements:
-                package.add_dependency(dependency)
-                seen_requirements.add(req)
-
-        package.extras = package_extras
-
+        self._add_dependencies(package, root_dir)
         return package
 
     @classmethod
@@ -521,6 +469,49 @@ class PackageInfo:
             return cls.from_bdist(path=path)
         except PackageInfoError:
             return cls.from_sdist(path=path)
+
+    def _get_package_path(self, root_dir):
+        if root_dir is not None:
+            return root_dir
+        if self._source_type == "directory" and self._source_url is not None:
+            return Path(self._source_url)
+        return None
+
+    def _add_dependencies(self, package, root_dir):
+        seen_requirements = set()
+        package_extras: dict[NormalizedName, list[Dependency]] = {}
+
+        for req in self.requires_dist or []:
+            try:
+                dependency = Dependency.create_from_pep_508(req, relative_to=root_dir)
+            except InvalidMarker:
+                logger.warning(
+                    "Stripping invalid marker (%s) found in %s-%s dependencies",
+                    req,
+                    package.name,
+                    package.version,
+                )
+                req = req.split(";")[0]
+                dependency = Dependency.create_from_pep_508(req, relative_to=root_dir)
+            except InvalidRequirement:
+                logger.warning(
+                    "Invalid requirement (%s) found in %s-%s dependencies, skipping",
+                    req,
+                    package.name,
+                    package.version,
+                )
+                continue
+
+            if dependency.in_extras:
+                for extra in dependency.in_extras:
+                    package_extras.setdefault(extra, []).append(dependency)
+
+            req = dependency.to_pep_508(with_extras=True)
+            if req not in seen_requirements:
+                package.add_dependency(dependency)
+                seen_requirements.add(req)
+
+        package.extras = package_extras
 
 
 @functools.lru_cache(maxsize=None)
