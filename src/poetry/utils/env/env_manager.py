@@ -37,6 +37,8 @@ from poetry.utils.env.system_env import SystemEnv
 from poetry.utils.env.virtual_env import VirtualEnv
 from poetry.utils.helpers import get_real_windows_path
 from poetry.utils.helpers import remove_directory
+from cleo.io.io import IO
+from poetry.poetry import Poetry
 
 
 if TYPE_CHECKING:
@@ -328,16 +330,25 @@ class EnvManager:
         return VirtualEnv(prefix, base_prefix)
 
     def list(self, name: str | None = None) -> list[VirtualEnv]:
-        if name is None:
-            name = self._poetry.package.name
-
-        venv_name = self.generate_env_name(name, str(self._poetry.file.path.parent))
+        package_name = name or self._poetry.package.name
+        venv_name = self.generate_env_name(
+            package_name, str(self._poetry.file.path.parent)
+        )
         venv_path = self._poetry.config.virtualenvs_path
-        env_list = [VirtualEnv(p) for p in sorted(venv_path.glob(f"{venv_name}-py*"))]
+        env_list = []
+
+        venv_pattern = f"{venv_name}-py*"
+        for p in venv_path.glob(venv_pattern):
+            env_list.append(VirtualEnv(p))
+
+        env_list.sort(
+            key=lambda v: v.path
+        )  # Deferred sorting to after list construction
 
         if self.in_project_venv_exists():
             venv = self.in_project_venv
             env_list.insert(0, VirtualEnv(venv))
+
         return env_list
 
     @staticmethod
