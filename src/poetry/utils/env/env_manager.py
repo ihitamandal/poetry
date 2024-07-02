@@ -37,6 +37,8 @@ from poetry.utils.env.system_env import SystemEnv
 from poetry.utils.env.virtual_env import VirtualEnv
 from poetry.utils.helpers import get_real_windows_path
 from poetry.utils.helpers import remove_directory
+from cleo.io.io import IO
+from poetry.poetry import Poetry
 
 
 if TYPE_CHECKING:
@@ -141,8 +143,6 @@ class EnvManager:
         prefer_active_python: bool = False,
         io: None | IO = None,
     ) -> Version:
-        version = ".".join(str(v) for v in sys.version_info[:precision])
-
         if prefer_active_python:
             executable = EnvManager._detect_active_python(io)
 
@@ -150,8 +150,11 @@ class EnvManager:
                 python_patch = subprocess.check_output(
                     [executable, "-c", GET_PYTHON_VERSION_ONELINER], text=True
                 ).strip()
+                return Version.parse(".".join(python_patch.split(".")[:precision]))
 
-                version = ".".join(str(v) for v in python_patch.split(".")[:precision])
+        # By returning early if prefer_active_python is set,
+        # we avoid unnecessary processing if it is True.
+        version = ".".join(map(str, sys.version_info[:precision]))
 
         return Version.parse(version)
 
