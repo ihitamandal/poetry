@@ -14,6 +14,8 @@ from poetry.repositories.exceptions import PackageNotFound
 from poetry.repositories.http_repository import HTTPRepository
 from poetry.repositories.link_sources.html import SimpleRepositoryPage
 from poetry.repositories.link_sources.html import SimpleRepositoryRootPage
+from poetry.config.config import Config
+from poetry.core.constraints.version import Version
 
 
 if TYPE_CHECKING:
@@ -53,10 +55,9 @@ class LegacyRepository(HTTPRepository):
         Note that this will be cached so the subsequent operations
         should be much faster.
         """
+        package_key = Package(name, version)
         try:
-            index = self._packages.index(Package(name, version))
-
-            return self._packages[index]
+            return self._packages[self._packages.index(package_key)]
         except ValueError:
             package = super().package(name, version, extras)
             package._source_type = "legacy"
