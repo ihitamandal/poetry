@@ -25,6 +25,8 @@ from requests.models import CONTENT_CHUNK_SIZE
 from requests.models import HTTPError
 from requests.models import Response
 from requests.status_codes import codes
+from collections.abc import Iterator
+from types import TracebackType
 
 
 if TYPE_CHECKING:
@@ -209,7 +211,8 @@ class ReadOnlyIOWrapper(BinaryIO):
         """Path to the underlying file."""
         return self._file.name
 
-    def seekable(self) -> bool:
+    @staticmethod
+    def seekable() -> bool:
         """Return whether random access is supported, which is True."""
         return True
 
