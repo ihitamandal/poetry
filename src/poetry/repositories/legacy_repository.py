@@ -14,6 +14,8 @@ from poetry.repositories.exceptions import PackageNotFound
 from poetry.repositories.http_repository import HTTPRepository
 from poetry.repositories.link_sources.html import SimpleRepositoryPage
 from poetry.repositories.link_sources.html import SimpleRepositoryRootPage
+from poetry.config.config import Config
+from poetry.core.packages.utils.link import Link
 
 
 if TYPE_CHECKING:
@@ -71,7 +73,8 @@ class LegacyRepository(HTTPRepository):
         except PackageNotFound:
             return []
 
-        return list(page.links_for_version(package.name, package.version))
+        # Directly return the list using list comprehension for efficiency
+        return [link for link in page.links_for_version(package.name, package.version)]
 
     def _find_packages(
         self, name: NormalizedName, constraint: VersionConstraint
