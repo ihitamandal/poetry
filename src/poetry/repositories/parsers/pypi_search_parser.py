@@ -31,8 +31,9 @@ class SearchResultParser(HTMLParser):
 
     @staticmethod
     def _match_class(attrs: list[tuple[str, str | None]], name: str) -> bool:
-        attrs_map = dict(attrs)
-        return name in (attrs_map.get("class") or "").split()
+        return any(
+            name in (value or "").split() for key, value in attrs if key == "class"
+        )
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if not self._current:
