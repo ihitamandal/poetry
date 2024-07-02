@@ -16,13 +16,13 @@ from tomlkit import inline_table
 from poetry.console.commands.command import Command
 from poetry.console.commands.env_command import EnvCommand
 from poetry.utils.dependency_specification import RequirementsParser
+from poetry.repositories import RepositoryPool
 
 
 if TYPE_CHECKING:
     from cleo.io.inputs.option import Option
     from packaging.utils import NormalizedName
     from poetry.core.packages.package import Package
-    from tomlkit.items import InlineTable
 
     from poetry.repositories import RepositoryPool
 
@@ -482,15 +482,13 @@ The <c1>init</c1> command creates a basic <comment>pyproject.toml</> file in the
         requires: Requirements = {}
         for requirement in requirements:
             name = requirement.pop("name")
-            constraint: str | InlineTable
             if "version" in requirement and len(requirement) == 1:
-                constraint = requirement["version"]
+                requires[name] = requirement["version"]
             else:
                 constraint = inline_table()
-                constraint.trivia.trail = "\n"
                 constraint.update(requirement)
-
-            requires[name] = constraint
+                constraint.trivia.trail = "\n"
+                requires[name] = constraint
 
         return requires
 
