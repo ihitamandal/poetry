@@ -25,6 +25,9 @@ from requests.models import CONTENT_CHUNK_SIZE
 from requests.models import HTTPError
 from requests.models import Response
 from requests.status_codes import codes
+from poetry.utils.authenticator import Authenticator
+from requests import Session
+from types import TracebackType
 
 
 if TYPE_CHECKING:
@@ -328,26 +331,36 @@ class LazyFileOverHTTP(ReadOnlyIOWrapper):
     def read(self, size: int = -1) -> bytes:
         """Read up to size bytes from the object and return them.
 
-        As a convenience, if size is unspecified or -1,
-        all bytes until EOF are returned.  Fewer than
-        size bytes may be returned if EOF is reached.
+        This is an optimized read method with better buffer handling.
 
         :raises ValueError: if ``__enter__`` was not called beforehand.
         """
         if self._length is None:
             raise ValueError(".__enter__() must be called to set up content length")
+
+        if size == 0:
+            return b""
+
         cur = self.tell()
         logger.debug("read size %d at %d from lazy file %s", size, cur, self.name)
+
         if size < 0:
-            assert cur <= self._length
-            download_size = self._length - cur
-        elif size == 0:
-            return b""
-        else:
-            download_size = size
-        stop = min(cur + download_size, self._length)
-        self._ensure_downloaded(cur, stop)
-        return super().read(download_size)
+            size = self._length - cur
+
+        stop = min(cur + size, self._length)
+
+        if stop <= len(self._downloaded_data):
+            return_data = self._downloaded_data[
+                self._buffer_pos : self._buffer_pos + size
+            ]
+            self._buffer_pos += len(return_data)
+            return bytes(return_data)
+
+        # Perform the download if the required data is outside the buffered data
+        self._download_data(cur, stop)
+        return_data = self._downloaded_data[self._buffer_pos : self._buffer_pos + size]
+        self._buffer_pos += len(return_data)
+        return bytes(return_data)
 
     @classmethod
     def _uncached_headers(cls) -> dict[str, str]:
@@ -483,6 +496,21 @@ class LazyFileOverHTTP(ReadOnlyIOWrapper):
                 self.seek(start)
                 for chunk in self._fetch_content_range(range_start, range_end):
                     self._file.write(chunk)
+
+    def _download_data(self, start, stop):
+        """Private method to download data chunk."""
+        headers = {"Range": f"bytes={start}-{stop-1}"}
+        response = self._session.get(self._url, headers=headers)
+        if response.status_code == 206:  # Partial Content
+            responded_data = response.content
+        elif response.status_code == 200 and start == 0:  # Full File
+            responded_data = response.content
+            self._length = len(responded_data)
+        else:
+            raise ValueError(f"Unexpected status code {response.status_code}")
+
+        self._downloaded_data.extend(responded_data)
+        self._buffer_pos = len(self._downloaded_data) - (stop - start)
 
 
 class LazyWheelOverHTTP(LazyFileOverHTTP):
