@@ -10,7 +10,7 @@ from bisect import bisect_left
 from bisect import bisect_right
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING
+from typing import Iterator, TYPE_CHECKING
 from typing import Any
 from typing import BinaryIO
 from typing import ClassVar
@@ -25,6 +25,7 @@ from requests.models import CONTENT_CHUNK_SIZE
 from requests.models import HTTPError
 from requests.models import Response
 from requests.status_codes import codes
+from types import TracebackType
 
 
 if TYPE_CHECKING:
@@ -275,7 +276,8 @@ class ReadOnlyIOWrapper(BinaryIO):
         """
         return self._file.truncate(size)
 
-    def writable(self) -> bool:
+    @staticmethod
+    def writable() -> bool:
         """Return False."""
         return False
 
