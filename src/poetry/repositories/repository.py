@@ -9,6 +9,8 @@ from poetry.core.constraints.version import Version
 
 from poetry.repositories.abstract_repository import AbstractRepository
 from poetry.repositories.exceptions import PackageNotFound
+from poetry.core.packages.dependency import Dependency
+from poetry.core.packages.package import Package
 
 
 if TYPE_CHECKING:
@@ -37,28 +39,33 @@ class Repository(AbstractRepository):
 
         constraint = dependency.constraint
         allow_prereleases = dependency.allows_prereleases()
+
+        pre_allocate = False
         for package in self._find_packages(dependency.name, constraint):
             if package.yanked and not isinstance(constraint, Version):
-                # PEP 592: yanked files are always ignored, unless they are the only
-                # file that matches a version specifier that "pins" to an exact
-                # version
                 continue
+
+            is_pre_release = package.is_prerelease()
+
             if (
-                package.is_prerelease()
+                is_pre_release
                 and not allow_prereleases
                 and not package.is_direct_origin()
             ):
                 ignored_pre_release_packages.append(package)
-                continue
+            else:
+                packages.append(package)
 
-            packages.append(package)
+            if not is_pre_release or allow_prereleases or package.is_direct_origin():
+                pre_allocate = True
 
-        self._log(
-            f"{len(packages)} packages found for {dependency.name} {constraint!s}",
-            level="debug",
-        )
+        if pre_allocate:
+            self._log(
+                f"{len(packages)} packages found for {dependency.name} {constraint!s}",
+                level="debug",
+            )
 
-        return packages or ignored_pre_release_packages
+        return packages if packages else ignored_pre_release_packages
 
     def has_package(self, package: Package) -> bool:
         package_id = package.unique_name
