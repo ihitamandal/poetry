@@ -33,8 +33,10 @@ def decode(string: bytes | str, encodings: list[str] | None = None) -> str:
     encodings = encodings or ["utf-8", "latin1", "ascii"]
 
     for encoding in encodings:
-        with suppress(UnicodeEncodeError, UnicodeDecodeError):
+        try:
             return string.decode(encoding)
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            pass
 
     return string.decode(encodings[0], errors="ignore")
 
