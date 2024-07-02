@@ -25,6 +25,8 @@ from requests.models import CONTENT_CHUNK_SIZE
 from requests.models import HTTPError
 from requests.models import Response
 from requests.status_codes import codes
+from collections.abc import Iterator
+from types import TracebackType
 
 
 if TYPE_CHECKING:
