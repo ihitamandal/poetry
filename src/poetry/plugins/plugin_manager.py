@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 from poetry.plugins.application_plugin import ApplicationPlugin
 from poetry.plugins.plugin import Plugin
 from poetry.utils._compat import metadata
+from functools import lru_cache
+from poetry.utils.env import Env
 
 
 if TYPE_CHECKING:
@@ -32,7 +34,7 @@ class PluginManager:
         if self._disable_plugins:
             return
 
-        plugin_entrypoints = self.get_plugin_entry_points(env=env)
+        plugin_entrypoints = self.get_plugin_entry_points_cached(env)
 
         for ep in plugin_entrypoints:
             self._load_plugin_entry_point(ep)
@@ -81,3 +83,7 @@ class PluginManager:
             )
 
         self.add_plugin(plugin())
+
+    @lru_cache(maxsize=None)
+    def get_plugin_entry_points_cached(self, env: Env | None) -> list:
+        return self.get_plugin_entry_points(env)
