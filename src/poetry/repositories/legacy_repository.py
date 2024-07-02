@@ -14,6 +14,7 @@ from poetry.repositories.exceptions import PackageNotFound
 from poetry.repositories.http_repository import HTTPRepository
 from poetry.repositories.link_sources.html import SimpleRepositoryPage
 from poetry.repositories.link_sources.html import SimpleRepositoryRootPage
+from poetry.config.config import Config
 
 
 if TYPE_CHECKING:
@@ -143,12 +144,12 @@ class LegacyRepository(HTTPRepository):
 
     def search(self, query: str) -> list[Package]:
         results: list[Package] = []
+        root_page_search = self.root_page.search
+        get_page = self.get_page
 
-        for candidate in self.root_page.search(query):
+        for candidate in root_page_search(query):
             with suppress(PackageNotFound):
-                page = self.get_page(candidate)
-
-                for package in page.packages:
-                    results.append(package)
+                page = get_page(candidate)
+                results.extend(page.packages)
 
         return results
