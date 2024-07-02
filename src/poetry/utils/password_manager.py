@@ -6,6 +6,7 @@ import logging
 
 from contextlib import suppress
 from typing import TYPE_CHECKING
+from poetry.config.config import Config
 
 
 if TYPE_CHECKING:
@@ -222,12 +223,10 @@ class PasswordManager:
 
     def delete_http_password(self, repo_name: str) -> None:
         auth = self.get_http_auth(repo_name)
-        if not auth:
+        if not auth or "username" not in auth:
             return
 
-        username = auth.get("username")
-        if username is None:
-            return
+        username = auth["username"]
 
         with suppress(PoetryKeyringError):
             self.keyring.delete_password(repo_name, username)
