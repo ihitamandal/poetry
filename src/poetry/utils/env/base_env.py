@@ -18,6 +18,7 @@ from virtualenv.seed.wheels.embed import get_embed_wheel
 from poetry.utils.env.exceptions import EnvCommandError
 from poetry.utils.env.site_packages import SitePackages
 from poetry.utils.helpers import get_real_windows_path
+from packaging.tags import Tag
 
 
 if TYPE_CHECKING:
@@ -253,11 +254,11 @@ class Env:
     @classmethod
     def get_base_prefix(cls) -> Path:
         real_prefix = getattr(sys, "real_prefix", None)
-        if real_prefix is not None:
+        if real_prefix:
             return Path(real_prefix)
 
         base_prefix = getattr(sys, "base_prefix", None)
-        if base_prefix is not None:
+        if base_prefix:
             return Path(base_prefix)
 
         return Path(sys.prefix)
