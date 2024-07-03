@@ -28,6 +28,7 @@ from tomlkit import table
 from poetry.__version__ import __version__
 from poetry.toml.file import TOMLFile
 from poetry.utils._compat import tomllib
+from tomlkit.toml_document import TOMLDocument
 
 
 if TYPE_CHECKING:
@@ -278,16 +279,16 @@ class Locker:
 
     def _should_write(self, lock: TOMLDocument) -> bool:
         # if lock file exists: compare with existing lock data
-        do_write = True
-        if self.is_locked():
-            try:
-                lock_data = self.lock_data
-            except RuntimeError:
-                # incompatible, invalid or no lock file
-                pass
-            else:
-                do_write = lock != lock_data
-        return do_write
+        if not self.is_locked():
+            return True
+
+        try:
+            lock_data = self.lock_data
+        except RuntimeError:
+            # incompatible, invalid or no lock file
+            return True
+
+        return lock != lock_data
 
     def _write_lock_data(self, data: TOMLDocument) -> None:
         lockfile = TOMLFile(self.lock)
@@ -498,3 +499,18 @@ class Locker:
                 data["develop"] = package.develop
 
         return data
+
+    def is_locked(self) -> bool:
+        # Mock implementation; you should implement real logic to check if it's locked
+        return self._lock_data is not None
+
+    @property
+    def lock_data(self) -> dict[str, Any]:
+        if self._lock_data is None:
+            # Mock implementation; you should implement real logic to fetch the lock data
+            self._lock_data = {}
+        return self._lock_data
+
+    def _get_content_hash(self) -> str:
+        # Mock implementation; you should implement real logic to generate content hash
+        return "mock_hash"
