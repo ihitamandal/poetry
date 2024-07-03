@@ -38,6 +38,10 @@ def int_normalizer(val: str) -> int:
     return int(val)
 
 
+def boolean_validator(val: str) -> bool:
+    return val in {"true", "false", "1", "0"}
+
+
 @dataclasses.dataclass
 class PackageFilterPolicy:
     policy: dataclasses.InitVar[str | list[str] | None]
@@ -86,12 +90,14 @@ class PackageFilterPolicy:
             return True
 
         names = policy.strip().split(",")
+        reserved_checker = cls.is_reserved
+        pattern = re.compile(r"^[a-zA-Z\d_-]+$")
 
         for name in names:
             if (
                 not name
-                or (cls.is_reserved(name) and len(names) == 1)
-                or re.match(r"^[a-zA-Z\d_-]+$", name)
+                or (reserved_checker(name) and len(names) == 1)
+                or pattern.match(name)
             ):
                 continue
             return False
