@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from poetry.mixology.incompatibility_cause import ConflictCause
+from poetry.mixology.incompatibility_cause import IncompatibilityCause, ConflictCause
 from poetry.mixology.incompatibility_cause import DependencyCause
 from poetry.mixology.incompatibility_cause import NoVersionsCause
 from poetry.mixology.incompatibility_cause import PlatformCause
 from poetry.mixology.incompatibility_cause import PythonCause
 from poetry.mixology.incompatibility_cause import RootCause
+from poetry.mixology.term import Term
 
 
 if TYPE_CHECKING:
