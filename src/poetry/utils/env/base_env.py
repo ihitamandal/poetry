@@ -18,6 +18,7 @@ from virtualenv.seed.wheels.embed import get_embed_wheel
 from poetry.utils.env.exceptions import EnvCommandError
 from poetry.utils.env.site_packages import SitePackages
 from poetry.utils.helpers import get_real_windows_path
+from packaging.tags import Tag
 
 
 if TYPE_CHECKING:
@@ -281,7 +282,8 @@ class Env:
         valid: bool = marker.validate(self.marker_env)
         return valid
 
-    def is_sane(self) -> bool:
+    @staticmethod
+    def is_sane() -> bool:
         """
         Checks whether the current environment is sane or not.
         """
