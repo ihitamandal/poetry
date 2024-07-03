@@ -7,7 +7,7 @@ import re
 
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Dict, TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
 
@@ -178,22 +178,15 @@ class Config:
 
         merge_dicts(self._config, config)
 
-    def all(self) -> dict[str, Any]:
-        def _all(config: dict[str, Any], parent_key: str = "") -> dict[str, Any]:
+    def all(self) -> Dict[str, Any]:
+        def _all(config: Dict[str, Any], parent_key: str = "") -> Dict[str, Any]:
             all_ = {}
-
-            for key in config:
-                value = self.get(parent_key + key)
+            for key, value in config.items():
                 if isinstance(value, dict):
-                    if parent_key != "":
-                        current_parent = parent_key + key + "."
-                    else:
-                        current_parent = key + "."
-                    all_[key] = _all(config[key], parent_key=current_parent)
-                    continue
-
-                all_[key] = value
-
+                    current_parent = f"{parent_key}{key}."
+                    all_[key] = _all(value, parent_key=current_parent)
+                else:
+                    all_[key] = value
             return all_
 
         return _all(self.config)
