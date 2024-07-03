@@ -18,6 +18,7 @@ from virtualenv.seed.wheels.embed import get_embed_wheel
 from poetry.utils.env.exceptions import EnvCommandError
 from poetry.utils.env.site_packages import SitePackages
 from poetry.utils.helpers import get_real_windows_path
+from packaging.tags import Tag
 
 
 if TYPE_CHECKING:
@@ -266,9 +267,8 @@ class Env:
         raise NotImplementedError()
 
     def get_pip_command(self, embedded: bool = False) -> list[str]:
-        if embedded or not Path(self._bin(self._pip_executable)).exists():
+        if embedded or not (self._bin_dir / self._pip_executable).exists():
             return [str(self.python), str(self.pip_embedded)]
-        # run as module so that pip can update itself on Windows
         return [str(self.python), "-m", "pip"]
 
     def get_supported_tags(self) -> list[Tag]:
