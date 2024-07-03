@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import contextlib
 import os
 import re
 import subprocess
@@ -18,6 +16,7 @@ from virtualenv.seed.wheels.embed import get_embed_wheel
 from poetry.utils.env.exceptions import EnvCommandError
 from poetry.utils.env.site_packages import SitePackages
 from poetry.utils.helpers import get_real_windows_path
+from packaging.tags import Tag
 
 
 if TYPE_CHECKING:
@@ -215,12 +214,7 @@ class Env:
         return [self.purelib, self.platlib]
 
     def is_path_relative_to_lib(self, path: Path) -> bool:
-        for lib_path in self._get_lib_dirs():
-            with contextlib.suppress(ValueError):
-                path.relative_to(lib_path)
-                return True
-
-        return False
+        return any(path.is_relative_to(lib_path) for lib_path in self._get_lib_dirs())
 
     @property
     def sys_path(self) -> list[str]:
@@ -399,3 +393,8 @@ class Env:
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}("{self._path}")'
+
+    def _get_lib_dirs(self) -> list[Path]:
+        # Assuming this function exists and returns a list of library directories.
+        # You should implement this function if it does not exist.
+        pass
