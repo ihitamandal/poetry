@@ -18,6 +18,7 @@ from virtualenv.seed.wheels.embed import get_embed_wheel
 from poetry.utils.env.exceptions import EnvCommandError
 from poetry.utils.env.site_packages import SitePackages
 from poetry.utils.helpers import get_real_windows_path
+from packaging.tags import Tag
 
 
 if TYPE_CHECKING:
@@ -212,7 +213,10 @@ class Env:
         return self._platlib
 
     def _get_lib_dirs(self) -> list[Path]:
-        return [self.purelib, self.platlib]
+        # assuming purelib and platlib are valid initialized paths
+        if self._purelib is None or self._platlib is None:
+            raise ValueError("purelib or platlib is not set")
+        return [self._purelib, self._platlib]
 
     def is_path_relative_to_lib(self, path: Path) -> bool:
         for lib_path in self._get_lib_dirs():
