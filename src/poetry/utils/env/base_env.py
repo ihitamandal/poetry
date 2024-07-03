@@ -18,6 +18,7 @@ from virtualenv.seed.wheels.embed import get_embed_wheel
 from poetry.utils.env.exceptions import EnvCommandError
 from poetry.utils.env.site_packages import SitePackages
 from poetry.utils.helpers import get_real_windows_path
+from packaging.tags import Tag
 
 
 if TYPE_CHECKING:
@@ -289,8 +290,6 @@ class Env:
 
     def get_command_from_bin(self, bin: str) -> list[str]:
         if bin == "pip":
-            # when pip is required we need to ensure that we fall back to
-            # embedded pip when pip is not available in the environment
             return self.get_pip_command()
 
         return [self._bin(bin)]
